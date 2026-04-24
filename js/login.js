@@ -1,16 +1,39 @@
 //login.js
-document.getElementById("loginform")?.addEventListener("submit", e => {
+import { hideAlert, showAlert, setButtonLoading, loginUser, observeAuth, getFirebaseErrorMessage } from "./auth.js"
+
+const form = document.getElementById("loginForm")
+const emailInput = document.getElementById("loginEmail")
+const passwordInput = document.getElementById("loginPassword")
+const loginBtn = document.getElementById("loginBtn")
+
+observeAuth((user)=> {
+    if (user) {
+        window.location.href = "./../../dashboard.html"
+    }
+})
+
+form?.addEventListener("submit", async e => {
     e.preventDefault()
 
-    const email = document.getElementById("loginEmail").value
-    const password = document.getElementById("loginPassword").value
+    hideAlert("loginAlert")
+
+    const email = emailInput.value
+    const password = passwordInput.value
 
     if (!email || !password) {
-        showAlert("loginalert", "por favor completa todos los campos")
+        showAlert("loginAlert", "por favor completa todos los campos")
         return
     }
 
-    localStorage.setItem("userName", email.split("@")[0])
+    try {
+        setButtonLoading(loginBtn, true, '<i class="bi bi-box-arrow-in-right me-2"></i> iniciar secion', 'iniciando secion')
 
-    window.location.href = "dashboard.html"
+        await loginUser({ email, password }) 
+
+        window.location.href = "./../../dashboard.html"
+    } catch (error) {
+        showAlert("loginAlert", getFirebaseErrorMessage(error))
+    } finally {
+        setButtonLoading(loginBtn, false, '<i class="bi bi-box-arrow-in-right me-2"></i> Iniciar Sesión')
+    }
 })

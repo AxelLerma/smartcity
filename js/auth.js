@@ -1,50 +1,102 @@
- // auth.js
+// auth.js
 import {
-    createUserWithEmailAndPassword,
-    signInWithEmailAndPassword,
-    onAuthStateChanged,
-    signOut
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
 
 import {
-    doc,
-    setDoc,
-    getDoc,
-    serverTimestamp
+  doc,
+  setDoc,
+  getDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
 
 import { auth, db } from "./firebase-config.js";
 
-export function showAlert(Elementid, message) {
-    const alert = document.getElementById(Elementid)
-    if (!alert) return
-    alert.textContent = message
-    alert.classList.remove('d-none')
+export function showAlert(elementId, message) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.textContent = message;
+  el.classList.remove("d-none");
 }
 
-export function hideAlert(Elementid) {
-    const alert = document.getElementById(Elementid)
-    if (!alert) return
-    alert.classList.add('d-none')
-    alert.textContent = ''
+export function hideAlert(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  el.classList.add("d-none");
+  el.textContent = "";
 }
 
-export async function registeredUser({ name, email, password, favoriteCity }) {
-    const credential = await createUserWithEmailAndPassword(auth, email, password)
-    const user = credential.user
+export function setButtonLoading(button, isLoading, text, loadingText = "Procesando...") {
+  if (!button) return;
 
-    await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        name,
-        email,
-        favoriteCity: favoriteCity || "",
-        createdAt: serverTimestamp()
-    })
+  button.disabled = isLoading;
 
-    return user
+  button.innerHTML = isLoading
+    ? `<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>${loadingText}`
+    : text;
+}
+
+export async function registerUser({ name, email, password, favoriteCity }) {
+  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  const user = credential.user;
+
+  await setDoc(doc(db, "users", user.uid), {
+    uid: user.uid,
+    name,
+    email,
+    favoriteCity: favoriteCity || "",
+    createdAt: serverTimestamp()
+  });
+
+  return user;
 }
 
 export async function loginUser({ email, password }) {
-    const credential = await signInWithEmailAndPassword(auth, email, password)
-    return credential.user
+  const credential = await signInWithEmailAndPassword(auth, email, password);
+  return credential.user;
+}
+
+export async function getCurrentUserProfile(uid) {
+  const ref = doc(db, "users", uid);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) return null;
+
+  return snap.data();
+}
+
+export function observeAuthState(callback) {
+  return onAuthStateChanged(auth, callback);
+}
+
+export const observeAuth = observeAuthState;
+
+export async function logoutUser() {
+  await signOut(auth);
+}
+
+export function getFirebaseErrorMessage(error) {
+  const code = error?.code || "";
+
+  switch (code) {
+    case "auth/email-already-in-use":
+      return "Este correo ya está registrado.";
+    case "auth/invalid-email":
+      return "El correo electrónico no es válido.";
+    case "auth/weak-password":
+      return "La contraseña debe tener al menos 6 caracteres.";
+    case "auth/invalid-credential":
+      return "Correo o contraseña incorrectos.";
+    case "auth/user-not-found":
+      return "No existe una cuenta con este correo.";
+    case "auth/wrong-password":
+      return "La contraseña es incorrecta.";
+    case "auth/too-many-requests":
+      return "Demasiados intentos. Intenta más tarde.";
+    default:
+      return error?.message || "Ocurrió un error inesperado.";
+  }
 }
